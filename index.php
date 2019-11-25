@@ -1,6 +1,11 @@
 <?php
 
-$conexion= mysqli_connect('localhost','root','','rak_moviles');
+$conexion= mysqli_connect('localhost','root','','rank_movies');
+
+if ($conexion->connect_error) {
+    die("conexion fallida: " . $conn->connect_error);
+    echo "conexion exitosa";
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -8,92 +13,78 @@ $conexion= mysqli_connect('localhost','root','','rak_moviles');
 <head>
 
 <meta charset="utf-8" name="viewport" content="width=device-width, initial-scale=1,maximum-scale=no"/>
-
-<link rel="stylesheet" href="jqm/jquery.mobile-1.3.2.min.css"/>
-  <script src="jquery/jquery-3.4.1.min.js"></script>
-
-<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+  <link rel="stylesheet" href="jqm/jquery.mobile-1.3.2.min.css"/>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
-<script>
-        $(document).ready(function() {
-            $('#nombre').on('click', function() { // Al darle click al boton con id getUser
-                var contenedor = $('#NOM_PELI').val(); // Captura contedido de caja con id user
-                $.ajax({
-                    type: 'POST',
-                    url: 'http://localhost/rankmovil/index.php',
-                    dataType: "json",
-                    data: {
-                        contenedor:contenedor //Pasar parametro
-                    },
-                    success: function(data) { //Retorno de datos desde php
-                        if (data.status == 'ok') {
-                            $('#ID_PELICULAS').text(data.result.ID);
-                            $('#NOM_PELI').text(data.result.NOMBRE);
-                            $('#DESC_PELI').text(data.result.DESCRIPCION);
-                            $('#ID_GENERO').text(data.result.GENERO);
-                            
-                            $('.user-content').slideDown();
-                        } else {
-                            $('.user-content').slideUp();
-                            alert("Pelicula  no encontrada.");
-                        }
-                    }
-                });
-            });
-        });
-    </script>
+  <script src="jquery/jquery-3.4.1.min.js"></script>
+  <script src="http://code.jquery.com/jquery-1.11.0.min.js"></script>
+  <script type="text/javascript">
+    $('dodument').ready(function(){
+      $(#lista).load("server/genero.php")
+    })
+  </script>
+
 </head>
 
-<body data-spy="scroll" data-target=".navbar" data-offset="50" style="height:1500px">
+<body data-spy="scroll" data-target=".navbar" data-offset="50" style="height:900px">
 
-<nav class="navbar navbar-expand-md bg-info navbar-dark text-white fixed-top justify-content-center ">
+<nav class="navbar navbar-expand-md bg-info navbar-dark text-white fixed-top justify-content-center mr-sm-2">
+
+<!---------------------encabezado-->
+
     <!-- Dropdown -->
-    <li class="nav-item dropdown">
-      <a class="nav-link dropdown-toggle bg-info text-white" href="#" id="navbardrop" data-toggle="dropdown">Seleccione Genero</a>
-      <div class="dropdown-menu">
-        <a href="aventura.php"  center class=" dropdown-item">AVENTURA</a>
-        <a href="comedia.php"  center class=" dropdown-item">COMEDIA</a>
-        <a href="drama.php"  center class=" dropdown-item">DRAMA</a>
-        <a href="terror.php"  center class=" dropdown-item">TERROR</a>
-        <a href="ciencia.php"  center class=" dropdown-item">CIENCIA FICCION</a>
-        <a href="accion.php"  center class=" dropdown-item">ACCION</a>
-        <a href="infantiles.php"  center class=" dropdown-item">INFANTILES</a>
-        <a href="OTROS.php"  center class=" dropdown-item">OTROS</a>
-      </div>
-    </li>
+  
+   
+    <form method="POST" >
+      <select name = "GENERO" onchange='submit()' class="bg-info text-white mr-sm-5"  >
+        <?php
+          $sql = "select GENERO FROM GENERO";
+          $rec = mysqli_query($conexion,$sql);
+          while ($row=mysqli_fetch_array($rec))
+          {
+            echo "<option value='".$row['ID_GENERO']."' >";
+            echo $row['GENERO'] ;
+            echo "</option>";
+          }
+          ?>
+      </select>  
+    </form>
 
-<a class="navbar-brand" href="#">RANK-MOVIES</a>
+      <!-- END Dropdown --> 
 
+<a class="navbar-brand mr-sm-5" href="#">  RANK-MOVIES</a>
+
+<!-- Buscador -->
   <form class="form-inline" action="/action_page.php">
-   <input type="text" id="contenedor"placeholder="Nombre">
-    <input type="button" id="nombre" value="BUSCAR">
-      </form>
+    <input class="form-control mr-sm-2" type="text" placeholder="Buscar">
+    <button class="btn btn-dark" type="submit">BUSCAR</button>
+  </form>
+
 </nav>
 <br>
   </ul>
 </nav>
 <br>
 
+<!-------------------contenedor -->
 
 
 <div class="container text-center">       
-  <table class="table table-dark table-striped">
-
+  <table id="lista"   class="table table-dark table-striped" >
     <thead>
       <tr>
-        <th>Peliculas</th>
-		
-		
-        <td>ID</td>
-        <td>NOMBRE</td>
-        <td>DESCRIPCION</td>
-        <td>GENERO</td>
+
+        <th>ACUMULADO</th>
+        <th>NOMBRE</th>
+        <th>DESCRIPCION</th>
+        <th>GENERO</th>
 		</tr>
 			
 			<?php
-			$sql="select * from peliculas";
+			$sql=" SELECT D.VOTO,D.NOM_PELI,D.DESC_PELI,D.GENERO FROM 
+( SELECT S.NOM_PELI,S.DESC_PELI,S.GENERO, CASE WHEN VT IS NOT NULL THEN TRUNCATE(S.VT/S.PG,0) END AS VOTO FROM ( SELECT P.NOM_PELI,p.DESC_PELI,g.GENERO, SUM(V.voto) AS VT, V.ID_PELICULA,COUNT(V.ID_PELICULA) AS PG FROM VOTO V INNER JOIN peliculas P ON (P.ID_PELICULAS = V.ID_PELICULA) INNER JOIN genero G ON (P.ID_GENERO = G.ID_GENERO) GROUP BY ID_PELICULA)S ) D ORDER BY VOTO DESC";
 			$result = mysqli_query($conexion,$sql);
 			
 			while ($mostrar=mysqli_fetch_array($result) ){
@@ -103,10 +94,10 @@ $conexion= mysqli_connect('localhost','root','','rak_moviles');
 			
 			
 		    <tr>
-        <td><?php echo $mostrar['ID_PELICULAS']?></td>
-        <td><?php echo $mostrar['NOM_PELI']?></td>
+        <td><?php echo $mostrar['VOTO']?></td>
+        <td href = "/voto.php"><?php echo $mostrar['NOM_PELI']?></td>
         <td><?php echo $mostrar['DESC_PELI']?></td>
-        <td><?php echo $mostrar['ID_GENERO']?></td>
+        <td><?php echo $mostrar['GENERO']?></td>
 		</tr>
 		
 		<?php
@@ -118,10 +109,14 @@ $conexion= mysqli_connect('localhost','root','','rak_moviles');
 		
       </tr>
     </thead>
-    <tbody>
-    </tbody>
   </table>
+  <script src="jquery.min.js"></script>
+<script src="ddtf.js"></script>
+<script>
+  $('#lista').ddTableFilter();
+</script>
 </div>
+
 
 
 
